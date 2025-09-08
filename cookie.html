@@ -17,7 +17,39 @@
             console.log(data);
         }
 
-        testCookie();
+        //testCookie();
+
+        // Simulate login with 'eduardo' and '102030abc'
+        (async function simulateLogin() {
+            const payload = {
+                action: "login",
+                user_name: "eduardo",
+                password: "102030abc"
+            };
+
+            try {
+                const response = await fetch("/app/Routes/api.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    console.log("Login realizado com sucesso!", result);
+                    setTimeout(() => {
+                        console.log("Verificando cookie após login...");
+                        testCookie();
+                    }, 1200);
+                } else {
+                    console.log("Credenciais inválidas.", result);
+                }
+            } catch (error) {
+                console.error("Erro na requisição:", error);
+                console.log("Erro na conexão com o servidor.");
+            }
+        })();
     </script>
 </body>
 </html>

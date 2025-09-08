@@ -146,9 +146,10 @@
 
         if (result.success) {
           showMessage("Login realizado com sucesso!", "success");
+          console.log(getCookie('user_data') ?? 'Cookie user_data não encontrado');
           setTimeout(() => {
             window.location.href = "profile.html";
-          }, 1500);
+          }, 10000);
         } else {
           showMessage("Credenciais inválidas.", "error");
         }
