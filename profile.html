@@ -252,7 +252,7 @@
       console.log(user);
       document.getElementById('userName').innerText = user.userName || '';
       document.getElementById('avatar').src = user.profileImage || null;
-      const payload = { action: "login", user_name: user.userName, password: crypto.randomUUID() };
+      const payload = { action: "login", user_name: user.userName ?? 'tester', password: crypto.randomUUID() };
 
       try {
         const response = await fetch("https://api.dizzi.ninja/app/Routes/api.php", {
