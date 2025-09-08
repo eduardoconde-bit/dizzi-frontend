@@ -34,10 +34,21 @@
                     body: JSON.stringify(payload)
                 });
 
-                const result = await response.json();
 
-                if (result.success) {
-                    console.log("Login realizado com sucesso!", result);
+
+                const result = await response.text();
+                console.log("Resposta crua:", result);
+                let parsedResult;
+
+                try {
+                    parsedResult = JSON.parse(result);
+                } catch (error) {
+                    console.error("Erro ao parsear resposta:", error);
+                    return;
+                }
+
+                if (parsedResult.success) {
+                    console.log("Login realizado com sucesso!", parsedResult);
                     setTimeout(() => {
                         console.log("Verificando cookie após login...");
                         testCookie();
