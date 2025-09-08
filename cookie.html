@@ -7,13 +7,17 @@
 </head>
 <body>
     <script>
-        const response = await fetch('https://api.dizzi.ninja/app/Routes/cookie.php', {
-            method: 'GET',
-            credentials: 'include'
-        })
+        async function testCookie() {
+            const response = await fetch('https://api.dizzi.ninja/app/Routes/cookie.php', {
+                method: 'GET',
+                credentials: 'include'
+            });
 
-        const data = await response.text();
-        console.log(data);
+            const data = await response.text();
+            console.log(data);
+        }
+
+        testCookie();
     </script>
 </body>
 </html>
