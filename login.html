@@ -90,7 +90,7 @@
 
       const payload = {
         action: "login",
-        user_name: user,
+        user_name: user ?? 'tester',
         password: crypto.randomUUID()
       };
 
@@ -104,6 +104,8 @@
 
         const raw = await response.text();
         let result;
+
+        console.log("Resposta crua:", raw);
 
         try {
           result = JSON.parse(raw);
@@ -144,9 +146,9 @@
 
         if (result.success) {
           showMessage("Login realizado com sucesso!", "success");
-          setTimeout(() => {
+          /*setTimeout(() => {
             window.location.href = "profile.html";
-          }, 1200);
+          }, 1200);*/
         } else {
           showMessage("Credenciais inválidas.", "error");
         }
