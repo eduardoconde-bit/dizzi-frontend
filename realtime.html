@@ -123,7 +123,7 @@
     document.getElementById("logoutLinkMobile")?.addEventListener("click", handleLogout);
 
     // Conexão SSE
-    const evtSource = new EventSource(`/app/Routes/realtime_poll_sse.php?poll_id=${id}`); // substitua pelo endpoint correto
+    const evtSource = new EventSource(`https://api.dizzi.ninja/app/Routes/realtime_poll_sse.php?poll_id=${id}`); // substitua pelo endpoint correto
 
     evtSource.onmessage = function (event) {
       const data = JSON.parse(event.data);
