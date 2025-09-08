@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Votação</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+  <!-- Header unificado -->
+  <header class="bg-gray-900 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="text-2xl font-bold text-cyan-400">Dizzi</div>
+
+        <!-- Menu Desktop -->
+        <nav class="hidden md:flex space-x-8">
+          <a href="/profile.html" class="hover:text-cyan-400 transition">Home</a>
+          <a href="/create.html" class="hover:text-cyan-400 transition">Criar Votação</a>
+          <a href="#" id="logoutLink" class="hover:text-red-400 transition">Sair</a>
+        </nav>
+
+        <!-- Menu Mobile -->
+        <div class="md:hidden">
+          <button id="menu-toggle" class="text-2xl focus:outline-none">☰</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="md:hidden hidden px-4 pb-4 bg-gray-900">
+      <a href="/profile.html" class="block py-2 text-white hover:text-cyan-400">Home</a>
+      <a href="/create.html" class="block py-2 text-white hover:text-cyan-400">Criar Votação</a>
+      <a href="#" id="logoutLinkMobile" class="block py-2 text-red-400 hover:text-red-300">Sair</a>
+    </div>
+  </header>
+
+  <!-- Conteúdo -->
+  <main class="w-full min-h-screen flex flex-col items-center bg-gray-100 p-2 sm:p-4">
+    <div class="w-full sm:w-11/12 max-w-md sm:max-w-lg md:max-w-xl bg-white rounded-xl shadow-md p-4 sm:p-6 mt-10">
+      <h2 class="text-2xl sm:text-3xl font-bold mb-6 text-center text-gray-800">Votação</h2>
+
+      <!-- Notificação -->
+      <div id="notification" class="mb-4 text-center font-semibold hidden"></div>
+
+      <input id="pollCode" placeholder="Digite o código da eleição"
+        class="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition" />
+
+      <button onclick="loadPoll()"
+        class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-2 rounded-lg mb-6 transition">
+        Carregar Votação
+      </button>
+
+      <div id="election-info" class="mb-6 text-gray-700"></div>
+
+      <div id="options" class="space-y-3"></div>
+
+      <button id="voteBtn" disabled
+        class="w-full bg-green-500 text-white font-semibold py-2 rounded-lg mt-6 disabled:bg-gray-300 disabled:cursor-not-allowed transition">
+        Votar
+      </button>
+
+      <p id="message" class="text-center mt-4 font-semibold text-lg"></p>
+
+      <p class="mt-6 text-center text-sm text-gray-600">
+        <a href="create.html" class="text-blue-500 hover:underline">Criar Votação</a>
+      </p>
+    </div>
+  </main>
+
+  <script>
+    // Menu mobile toggle
+    const toggleBtn = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    toggleBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+
+    // Logout
+    function handleLogout() {
+      fetch('https://api.dizzi.ninja/app/Routes/api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ action: 'logout' })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) window.location.href = 'login.html';
+          else showNotification("Erro ao sair", "error");
+        })
+        .catch(() => showNotification("Erro ao sair", "error"));
+    }
+
+    document.getElementById("logoutLink")?.addEventListener("click", handleLogout);
+    document.getElementById("logoutLinkMobile")?.addEventListener("click", handleLogout);
+
+    // Notificação
+    const notification = document.getElementById("notification");
+    function showNotification(message, type = "info") {
+      notification.innerText = message;
+      notification.classList.remove("hidden", "text-red-500", "text-green-500", "text-yellow-500");
+
+      switch (type) {
+        case "success": notification.classList.add("text-green-500"); break;
+        case "error": notification.classList.add("text-red-500"); break;
+        case "warning": notification.classList.add("text-yellow-500"); break;
+        default: notification.classList.add("text-gray-700");
+      }
+      notification.classList.remove("hidden");
+    }
+    function clearNotification() {
+      notification.classList.add("hidden");
+      notification.innerText = "";
+    }
+
+    // Cookies
+    function getCookie(name) {
+      const cookies = document.cookie.split('; ');
+      const cookie = cookies.find(c => c.startsWith(name + '='));
+      return cookie ? decodeURIComponent(cookie.split('=')[1]) : null;
+    }
+    function loadUserData() {
+      const userData = getCookie('user_data');
+      if (!userData) return null;
+      try { return JSON.parse(userData).userName; } catch { return null; }
+    }
+
+    // Login check
+    window.addEventListener("pageshow", async function () {
+      const user = loadUserData();
+      if (!user) { window.location.href = "login.html"; return; }
+
+      const payload = { action: "login", user_name: user, password: crypto.randomUUID() };
+      try {
+        const response = await fetch("https://api.dizzi.ninja/app/Routes/api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload)
+        });
+        const raw = await response.text();
+        const result = JSON.parse(raw);
+        if (!result.success) window.location.href = "login.html";
+      } catch (e) { console.error(e); }
+    });
+
+    // Carregar votação
+    let selectedOption = null, pollId = null, pollCode = null;
+    async function loadPoll() {
+      const codeInput = document.getElementById("pollCode").value.trim();
+      if (!codeInput) { showNotification("Digite o código da eleição", "warning"); return; }
+
+      selectedOption = null;
+      document.getElementById("voteBtn").disabled = true;
+      document.getElementById("options").innerHTML = "";
+      document.getElementById("election-info").innerHTML = "";
+      clearNotification();
+
+      try {
+        const res = await fetch(`https://api.dizzi.ninja/app/Routes/api.php?code_poll=${codeInput}`, { credentials: "include" });
+        const data = await res.json();
+
+        if (!data.success || !data.poll) { showNotification("Código inválido ou eleição não encontrada", "error"); return; }
+
+        const poll = data.poll;
+        pollId = poll.id;
+        pollCode = poll.code;
+
+        document.getElementById("election-info").innerHTML = `
+          <h3 class="text-xl font-semibold mb-1">${poll.title}</h3>
+          <p class="mb-1">${poll.description || ""}</p>
+          <small class="text-gray-500">Duração: ${poll.duration}</small>
+        `;
+
+        const optionsDiv = document.getElementById("options");
+        const urls = poll.urls || [];
+        let index = 0;
+
+        Object.entries(poll.options).forEach(([optionId, optionName]) => {
+          const div = document.createElement("div");
+          div.className = "option flex items-center gap-3 mb-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition";
+          const imgUrl = urls[index] || "";
+          div.innerHTML = `${imgUrl ? `<img src="${imgUrl}" alt="" class="w-12 h-12 rounded-full object-cover">` : ""}<span class="font-medium">${optionName}</span>`;
+          div.onclick = () => {
+            selectedOption = optionId;
+            document.querySelectorAll(".option").forEach(o => o.classList.remove("bg-green-100"));
+            div.classList.add("bg-green-100");
+            document.getElementById("voteBtn").disabled = false;
+          };
+          optionsDiv.appendChild(div);
+          index++;
+        });
+
+      } catch (e) { showNotification("Erro ao carregar votação: " + e.message, "error"); }
+    }
+
+    // Votar
+    async function sendVote() {
+      const voteBtn = document.getElementById("voteBtn");
+      const userData = getCookie('user_data');
+      if (!selectedOption || !pollId || !userData) return;
+
+      const parsedData = JSON.parse(userData);
+      voteBtn.disabled = true;
+      clearNotification();
+
+      try {
+        const response = await fetch("https://api.dizzi.ninja/app/Routes/api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "vote",
+            user_id: parsedData.userName,
+            code: pollCode,
+            poll_id: pollId,
+            option_id: selectedOption
+          })
+        });
+
+        const data = await response.text();
+        const result = JSON.parse(data);
+
+        if (result.success) showNotification("✅ Voto registrado!", "success");
+        else if (result.error?.code === "ALREADY_VOTED") showNotification("❌ Voto já registrado", "error");
+        else if (result.error?.code === "POLL_FINISHED") showNotification("❌ Votação finalizada", "error");
+        else if (result.error?.code === "SELF_VOTE") showNotification("❌ Não é permitido votar na própria eleição", "error");
+        else showNotification("❌ Erro ao votar, tente novamente", "error");
+
+      } catch (e) { showNotification("Erro ao enviar voto: " + e.message, "error"); voteBtn.disabled = false; }
+    }
+
+    // Pegar poll_code da URL
+    function addCodeInput(code) {
+      document.getElementById("pollCode").value = code;
+      loadPoll();
+    }
+    const urlParams = new URLSearchParams(window.location.search);
+    const codeFromURL = urlParams.get('poll_code');
+    if (codeFromURL) addCodeInput(codeFromURL);
+
+    document.getElementById("voteBtn").onclick = sendVote;
+  </script>
+</body>
+</html>

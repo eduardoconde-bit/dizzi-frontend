@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Dizzi - Registro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-gray-900 text-cyan-400 py-4 px-6 shadow-md fixed w-full top-0 z-10">
+    <h1 class="text-2xl font-bold">Dizzi</h1>
+  </header>
+
+  <!-- Container central -->
+  <main class="flex-grow flex items-center justify-center pt-20 px-4">
+    <div class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm">
+      <h2 class="text-2xl font-bold text-gray-900 text-center mb-6">Criar Conta</h2>
+      <form id="registerForm" class="space-y-4">
+        <input type="text" id="user_name" placeholder="Nome de usuário" required
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+        <input type="password" id="password" placeholder="Senha" required
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+        <input type="password" id="confirm_password" placeholder="Confirme a senha" required
+          class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+        <div id="formMessage" class="text-center text-sm text-red-500"></div>
+        <button type="submit"
+          class="w-full bg-cyan-500 hover:bg-cyan-600 text-white py-2 rounded-lg font-semibold transition">Registrar</button>
+      </form>
+
+      <div class="mt-6 text-center space-y-2">
+        <a href="login.html" class="text-cyan-600 hover:underline">Já tem conta? Faça login</a><br>
+        <a href="index.html" class="text-gray-600 hover:underline">Voltar</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById("registerForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      const messageDiv = document.getElementById("formMessage");
+      messageDiv.textContent = "";
+
+      const user_name = document.getElementById("user_name").value;
+      const password = document.getElementById("password").value;
+      const confirm_password = document.getElementById("confirm_password").value;
+
+      // Validação do nome de usuário (mínimo 3 caracteres, sem espaços)
+      function validateUserName(user_name) {
+        return /^[\w\d!@#$%^&*()\-_=+\[\]{};:'",.<>/?\\|`~]{3,}$/.test(user_name);
+      }
+
+      if (!validateUserName(user_name)) {
+        messageDiv.textContent = "Nome de usuário inválido. Use pelo menos 3 caracteres e não use espaços.";
+        return;
+      }
+
+      if (password.length < 6) {
+        messageDiv.textContent = "A senha deve ter pelo menos 6 caracteres.";
+        return;
+      }
+
+      if (password !== confirm_password) {
+        messageDiv.textContent = "As senhas não coincidem.";
+        return;
+      }
+
+      const payload = { action: "register", user_name, password };
+
+      try {
+        const response = await fetch("https://api.dizzi.ninja/app/Routes/api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const raw = await response.text();
+        let result;
+
+        try {
+          result = JSON.parse(raw);
+        } catch {
+          messageDiv.textContent = "Erro inesperado do servidor. Tente novamente.";
+          return;
+        }
+
+        if (result.success) {
+          messageDiv.classList.remove("text-red-500");
+          messageDiv.classList.add("text-green-500");
+          messageDiv.textContent = "Registro realizado com sucesso! Você será redirecionado para o login...";
+          setTimeout(() => window.location.href = "login.html", 2000);
+        } else {
+          messageDiv.textContent = "Erro: " + (result.message || "Não foi possível registrar. Tente outro nome de usuário.");
+        }
+      } catch (error) {
+        console.error("Erro na requisição:", error);
+        messageDiv.textContent = "Erro na conexão com o servidor. Tente novamente mais tarde.";
+      }
+    });
+  </script>
+
+</body>
+
+</html>

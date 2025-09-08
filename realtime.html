@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Dizzi - Votação em Tempo Real</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+
+  <!-- Header unificado -->
+  <header class="bg-gray-900 text-white sticky top-0 z-50 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <!-- Logo -->
+        <div class="text-2xl font-bold text-cyan-400">Dizzi</div>
+
+        <!-- Menu Desktop -->
+        <nav class="hidden md:flex space-x-8">
+          <a href="/profile.html" class="hover:text-cyan-400 transition">Home</a>
+          <a href="/create.html" class="hover:text-cyan-400 transition">Criar Votação</a>
+          <a href="/vote.html" class="hover:text-cyan-400 transition">Votar</a>
+          <a href="#" id="logoutLink" class="hover:text-red-400 transition">Sair</a>
+        </nav>
+
+        <!-- Botão Menu Mobile -->
+        <div class="md:hidden">
+          <button id="menu-toggle" class="text-2xl focus:outline-none">☰</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu Mobile -->
+    <div id="mobile-menu" class="md:hidden hidden px-4 pb-4 bg-gray-900">
+      <a href="/profile.html" class="block py-2 text-white hover:text-cyan-400">Início</a>
+      <a href="/create.html" class="block py-2 text-white hover:text-cyan-400">Criar Votação</a>
+      <a href="/vote.html" class="block py-2 text-white hover:text-cyan-400">Votar</a>
+      <a href="#" id="logoutLinkMobile" class="block py-2 text-red-400 hover:text-red-300">Sair</a>
+    </div>
+  </header>
+
+  <!-- Conteúdo principal -->
+  <main class="max-w-4xl mx-auto p-6 space-y-6">
+
+    <!-- Título da Votação -->
+    <h1 id="pollTitle" class="text-3xl font-bold text-gray-800 mb-6 text-center">
+      Carregando eleição...
+    </h1>
+
+    <!-- Total de votos -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-2">Total de Votos</h2>
+      <p class="text-3xl font-bold text-cyan-500" id="totalVotes">0</p>
+    </section>
+
+    <!-- Códigos Ativos -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-2">Código Ativo</h2>
+      <ul id="codes" class="list-disc ml-6 text-gray-700"></ul>
+    </section>
+
+    <!-- Opções de Votação -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-2">Opções de Votação</h2>
+      <ul id="options" class="list-disc ml-6 text-gray-700"></ul>
+    </section>
+
+    <!-- Usuários que Votaram -->
+    <section class="bg-white rounded-xl shadow p-6">
+      <h2 class="text-xl font-semibold text-gray-800 mb-4 text-center">Usuários que Votaram</h2>
+      <ul id="votedUsers" class="list-disc ml-6 text-gray-700"></ul>
+    </section>
+
+    <!-- Timestamp -->
+    <div class="flex items-center justify-center text-sm text-gray-500 mt-4" id="timestamp">
+      <div class="w-4 h-4 border-2 border-gray-300 border-t-cyan-500 rounded-full animate-spin mr-2"></div>
+      <span id="timestamp-text">Última atualização: --</span>
+    </div>
+
+  </main>
+
+  <!-- Scripts -->
+  <script>
+    // Toggle menu mobile
+    const toggleBtn = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    toggleBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('hidden');
+    });
+
+    // Elementos
+    const pollTitleEl = document.getElementById('pollTitle');
+    const totalVotesEl = document.getElementById('totalVotes');
+    const codesEl = document.getElementById('codes');
+    const optionsEl = document.getElementById('options');
+    const votedUsersEl = document.getElementById('votedUsers');
+    const timestampEl = document.getElementById('timestamp');
+
+    // Pega o poll_id da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get('poll_id');
+    if (id) console.log("ID da eleição: " + id);
+
+    // Logout
+    function handleLogout() {
+      fetch('https://api.dizzi.ninja/app/Routes/api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ action: 'logout' })
+      })
+      .then(res => res.json())
+      .then(data => {
+      if (data.success) window.location.href = 'login.html';
+      else alert('Erro ao sair.');
+      })
+      .catch(() => alert('Erro ao sair.'));
+    }
+
+    document.getElementById("logoutLink")?.addEventListener("click", handleLogout);
+    document.getElementById("logoutLinkMobile")?.addEventListener("click", handleLogout);
+
+    // Conexão SSE
+    const evtSource = new EventSource(`/app/Routes/realtime_poll_sse.php?poll_id=${id}`); // substitua pelo endpoint correto
+
+    evtSource.onmessage = function (event) {
+      const data = JSON.parse(event.data);
+      if (data.error) {
+        pollTitleEl.textContent = "Erro: " + data.error;
+        return;
+      }
+
+      console.log("Dados recebidos via SSE:", data);
+
+      pollTitleEl.textContent = data.poll_title;
+      totalVotesEl.textContent = data.total_votes;
+
+      updateList(codesEl, data.codes);
+      updateList(optionsEl, data.options);
+      updateVotedUsers(votedUsersEl, data.voted_users);
+
+      timestampEl.querySelector("#timestamp-text").textContent = "Última atualização: " + utcToLocal(data.timestamp);
+    };
+
+    evtSource.onerror = function (err) {
+      console.error("Erro SSE:", err);
+    };
+
+    // Função utilitária
+    function updateList(container, items) {
+      container.innerHTML = '';
+      items.forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        container.appendChild(li);
+      });
+    }
+
+    function updateVotedUsers(container, users) {
+      container.innerHTML = '';
+
+      // Define o container como grid horizontal com espaçamento
+      container.classList.add('grid', 'grid-cols-auto-fit', 'gap-1', 'justify-start');
+      container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(60px, 1fr))';
+
+      users.forEach(user => {
+        const div = document.createElement('div');
+        div.classList.add('flex', 'flex-col', 'items-center');
+
+        // Imagem do perfil
+        const img = document.createElement('img');
+        img.src = user.profile_image || 'default-profile.png';
+        img.alt = user.user_id;
+        img.classList.add('w-14', 'h-14', 'rounded-full', 'border', 'border-gray-300');
+
+        // Nome do usuário
+        const span = document.createElement('span');
+        span.style.fontWeight = '500';
+        span.style.fontSize = '0.9rem'; // text-xs
+        span.textContent = user.user_id;
+        span.classList.add('text-xs', 'mt-1', 'text-gray-700', 'truncate', 'text-center');
+
+        div.appendChild(img);
+        div.appendChild(span);
+        container.appendChild(div);
+      });
+    }
+
+
+
+
+    /**
+     * Converte uma string UTC (ISO ou "YYYY-MM-DD HH:MM:SS") para hora local
+     * @param {string} utcDateTime - Data/hora em UTC
+     * @param {string} [options] - opções de formatação (opcional)
+     * @returns {string} - data/hora formatada em fuso local
+     */
+    function utcToLocal(utcDateTime, options = {}) {
+      // Se receber formato 'YYYY-MM-DD HH:MM:SS', substitui espaço por T
+      let utcString = utcDateTime.replace(' ', 'T') + 'Z'; // garante que é UTC
+      const date = new Date(utcString);
+
+      // Formato padrão: dd/mm/yyyy hh:mm:ss
+      const defaultOptions = {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      };
+
+      return date.toLocaleString(undefined, { ...defaultOptions, ...options });
+    }
+  </script>
+
+</body>
+
+</html>
